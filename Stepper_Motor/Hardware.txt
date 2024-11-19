@@ -1,0 +1,5 @@
+Especificaciones principales del motor 28BYJ-48:
+Tipo: Motor paso a paso unipolar.
+Reducción de engranajes: 1:64.
+Pasos por revolución del motor interno: 32 pasos.
+Pasos por revolución del eje final (salida): 2048 pasos.

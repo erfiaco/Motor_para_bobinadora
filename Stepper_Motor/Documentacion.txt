@@ -1,0 +1,13 @@
+En este tipo de motor, hablamos de pasos. Un paso es la combinación de on off de los pines. 
+Por ejemplo: 
+
+Un paso casual: (4, 1), (17, 0), (27, 0), (22, 1)
+
+Estos motores no usan PWM. 
+La velocidad de un motor paso a paso está determinada por la cantidad de pasos por revolución y la frecuencia con la que envías la secuencia de pasos.
+La velocidad se controla con el time.sleep entre pasos. Ojo que el time.sleep da problemas para altas velocidades.
+Pasos por segundo = Pasos por revolución × Vueltas por segundo
+
+
+
+
