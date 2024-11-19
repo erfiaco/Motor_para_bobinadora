@@ -1,0 +1,46 @@
+
+TAREA PARA MAÑANA:
+==================
+Implementar la funcionalidad para aumentar progresivamente la velocidad del motor paso a paso.
+
+Detalles:
+- Comenzar con un delay inicial más grande (velocidad lenta).
+- Reducir el delay dinámicamente durante la ejecución para aumentar la velocidad.
+- Asegurarse de que el motor no exceda su velocidad máxima soportada.
+- Pruebas con diferentes configuraciones para ajustar el incremento de velocidad.
+
+
+TAREA FUTURA:
+=============
+Implementar el control de velocidad del motor paso a paso utilizando un potenciómetro.
+
+Detalles:
+- Usar un ADC (como MCP3008) para leer valores analógicos del potenciómetro.
+- Mapear los valores del potenciómetro a delays adecuados (por ejemplo, 0.001 a 0.01 segundos).
+- Ajustar dinámicamente la velocidad del motor en función de la posición del potenciómetro.
+- Realizar pruebas para garantizar un control suave y preciso.
+
+
+PLAN DE TRABAJO FUTURO:
+=======================
+1. Implementar la funcionalidad para aumentar progresivamente la velocidad del motor paso a paso.
+   - Comenzar con un delay inicial más grande (velocidad lenta).
+   - Reducir el delay dinámicamente durante la ejecución para aumentar la velocidad.
+   - Asegurarse de que el motor no exceda su velocidad máxima soportada.
+   - Pruebas con diferentes configuraciones para ajustar el incremento de velocidad.
+
+2. Implementar el control de velocidad del motor paso a paso utilizando un potenciómetro.
+   - Usar un ADC (como MCP3008) para leer valores analógicos del potenciómetro.
+   - Mapear los valores del potenciómetro a delays adecuados (por ejemplo, 0.001 a 0.01 segundos).
+   - Ajustar dinámicamente la velocidad del motor en función de la posición del potenciómetro.
+   - Realizar pruebas para garantizar un control suave y preciso.
+
+3. Crear una clase para gestionar los inputs del usuario.
+   - Los inputs serán:
+       - "on": Inicia el movimiento del motor.
+       - "off": Detiene el motor.
+       - Potenciómetro: Regula la velocidad del motor.
+   - La clase gestionará todas las interacciones del usuario con el sistema.
+   - Crear una biblioteca separada del archivo principal para encapsular esta funcionalidad.
+   - Diseñar pruebas para asegurar la correcta integración entre la biblioteca y el archivo principal.
+
