@@ -1,4 +1,4 @@
-'''Añadimos que se apague después de 5seg en HIGH. Además añadimos el GPIO.Cleanup para que libere los pines'''
+'''Añadimos la función de stop separadamente'''
 
 import RPi.GPIO as GPIO
 import time
@@ -18,8 +18,13 @@ def endavant(t):
     GPIO.output(IN1, GPIO.HIGH)
     GPIO.output(IN2, GPIO.LOW)
     time.sleep(t)
+ 
+def stop(t):
+    
     GPIO.output(EN, GPIO.LOW)
+    time.sleep(t)
     
 setup()
 endavant(5)
+stop(5)
 GPIO.cleanup()
