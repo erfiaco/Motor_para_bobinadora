@@ -1,5 +1,3 @@
-'''Empezamos a trabajar por clases'''
-
 import RPi.GPIO as GPIO
 import time
 
@@ -11,35 +9,58 @@ class MotorDC:
         self.en = en
         self.in1 = in1
         self.in2 = in2
+        self.pwm = None
         self.setup()
 
     def setup(self):
         """
-        Configura los pines GPIO.
+        Configura los pines GPIO y el PWM para control de velocidad.
         """
         GPIO.setmode(GPIO.BCM)
         GPIO.setup([self.en, self.in1, self.in2], GPIO.OUT)
+        self.pwm = GPIO.PWM(self.en, 100)  # Frecuencia del PWM: 100 Hz
+        self.pwm.start(0)  # Inicializamos con duty cycle de 0 (motor apagado)
 
-    def endavant(self, t):
+    def encender_motor(self, sentido, t):
         """
-        Activa el motor en dirección hacia adelante durante `t` segundos.
+        Activa el motor en el sentido especificado con velocidad gradual.
+        Parámetros:
+            sentido: 'horario' o 'antihorario'
+            t: Tiempo en segundos que el motor debe activarse
         """
-        GPIO.output(self.en, GPIO.HIGH)
-        GPIO.output(self.in1, GPIO.HIGH)
-        GPIO.output(self.in2, GPIO.LOW)
-        time.sleep(t)
+        if sentido == "horario":
+            GPIO.output(self.in1, GPIO.LOW)
+            GPIO.output(self.in2, GPIO.HIGH)
+        elif sentido == "antihorario":
+            GPIO.output(self.in1, GPIO.HIGH)
+            GPIO.output(self.in2, GPIO.LOW)
+        else:
+            print("Sentido no válido. Usa 'horario' o 'antihorario'.")
+            return
+
+        # Incrementar la velocidad gradualmente
+        for duty_cycle in range(0, 101, 5):  # Incrementa de 0 a 100 en pasos de 5
+            self.pwm.ChangeDutyCycle(duty_cycle)
+            time.sleep(0.1)  # Tiempo entre incrementos
+
+        time.sleep(t)  # Mantiene la velocidad máxima durante el tiempo `t`
 
     def stop(self, t):
         """
-        Detiene el motor durante `t` segundos.
+        Detiene el motor gradualmente.
         """
-        GPIO.output(self.en, GPIO.LOW)
-        time.sleep(t)
+        # Reducir la velocidad gradualmente
+        for duty_cycle in range(100, -1, -5):  # De 100 a 0 en pasos de -5
+            self.pwm.ChangeDutyCycle(duty_cycle)
+            time.sleep(0.1)  # Tiempo entre decrementos
+
+        time.sleep(t)  # Pausa después de detener el motor
 
     def cleanup(self):
         """
         Limpia los pines GPIO.
         """
+        self.pwm.stop()
         GPIO.cleanup()
 
 
@@ -52,11 +73,15 @@ class ProgramaMotor:
 
     def obtener_datos_usuario(self):
         """
-        Obtiene el tiempo de funcionamiento del motor del usuario.
+        Obtiene los datos del usuario: tiempo de movimiento y sentido de giro.
         """
         try:
             t = float(input("Introduce el tiempo en segundos para el movimiento: "))
-            return t
+            sentido = input("Introduce el sentido ('horario' o 'antihorario'): ").strip().lower()
+            if sentido not in ["horario", "antihorario"]:
+                print("Por favor, introduce un sentido válido ('horario' o 'antihorario').")
+                return self.obtener_datos_usuario()
+            return t, sentido
         except ValueError:
             print("Por favor, introduce un número válido.")
             return self.obtener_datos_usuario()
@@ -66,8 +91,8 @@ class ProgramaMotor:
         Controla el flujo principal del programa.
         """
         try:
-            t = self.obtener_datos_usuario()
-            self.motor.endavant(t)
+            t, sentido = self.obtener_datos_usuario()
+            self.motor.encender_motor(sentido, t)
             self.motor.stop(2)  # Tiempo de parada
         except KeyboardInterrupt:
             print("\nPrograma interrumpido por el usuario.")
