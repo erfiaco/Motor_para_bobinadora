@@ -2,7 +2,7 @@ import RPi.GPIO as GPIO
 import time
 
 # Pines para el motor paso a paso
-PINS = [4, 17, 27, 22]  # Conecta estos pines al ULN2003
+PINS = [4, 17, 27, 22]  # Conecta estos pines al ULN2003 (Board: 7 11 13 15)
 
 # Secuencia para el motor paso a paso (8 pasos)
 STEP_SEQUENCE = [
