@@ -82,16 +82,30 @@ class StepperMotor:
     def move(self, direction, duration):
         """
         Mueve el motor en la dirección especificada durante un tiempo dado.
+        El motor acelera gradualmente desde velocidad 0.
         """
+        target_speed = self.speed
+        self.set_speed(0)  # Iniciar desde velocidad 0
         sequence = self.sequences.get_sequence(self.current_mode)
+
+        # Aumentar gradualmente hasta la velocidad objetivo
+        steps = 50  # Número de pasos para incrementar la velocidad
+        speed_increment = target_speed / steps
+        current_speed = 0
         start_time = time.time()
+
         while time.time() - start_time < duration:
-            delay = 0.001 / self.speed
-            steps = sequence if direction == "forward" else reversed(sequence)
-            for step in steps:
+            delay = 0.001 / current_speed if current_speed > 0 else 0.1
+            steps_sequence = sequence if direction == "forward" else reversed(sequence)
+            for step in steps_sequence:
                 for pin, value in zip(self.pins, step):
                     GPIO.output(pin, value)
                 time.sleep(delay)
+
+            # Incrementar velocidad gradualmente
+            if current_speed < target_speed:
+                current_speed += speed_increment
+                current_speed = min(current_speed, target_speed)  # Limitar al máximo
 
     def stop(self):
         """
