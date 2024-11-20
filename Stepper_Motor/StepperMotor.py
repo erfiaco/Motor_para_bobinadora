@@ -1,15 +1,57 @@
-import RPi.GPIO as GPIO
 import time
+import RPi.GPIO as GPIO
+
+
+class StepperSequences:
+    """
+    Clase para gestionar las secuencias de pasos del motor.
+    """
+    def __init__(self):
+        self.full_step_sequence = [
+            [1, 0, 0, 0],
+            [1, 1, 0, 0],
+            [0, 1, 0, 0],
+            [0, 1, 1, 0],
+            [0, 0, 1, 0],
+            [0, 0, 1, 1],
+            [0, 0, 0, 1],
+            [1, 0, 0, 1],
+        ]
+        self.wave_drive_sequence = [
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, 0, 1],
+        ]
+
+    def get_sequence(self, mode):
+        """
+        Devuelve la secuencia correspondiente al modo.
+        :param mode: Modo de secuencia ('full_step' o 'wave_drive').
+        """
+        if mode == "full_step":
+            return self.full_step_sequence
+        elif mode == "wave_drive":
+            return self.wave_drive_sequence
+        else:
+            raise ValueError(f"Modo desconocido: {mode}")
+
 
 class StepperMotor:
-    def __init__(self, pins, step_sequence):
+    """
+    Clase para controlar un motor paso a paso.
+    """
+    def __init__(self, pins, sequences, speed=1.0):
         """
         Inicializa el motor paso a paso.
         :param pins: Lista de pines GPIO conectados al motor.
-        :param step_sequence: Secuencia de pasos para el motor.
+        :param sequences: Instancia de la clase StepperSequences.
+        :param speed: Velocidad inicial del motor.
         """
         self.pins = pins
-        self.step_sequence = step_sequence
+        self.sequences = sequences
+        self.speed = speed
+        self.current_mode = "full_step"  # Modo inicial
         self.setup()
 
     def setup(self):
@@ -20,28 +62,33 @@ class StepperMotor:
         GPIO.setup(self.pins, GPIO.OUT)
         GPIO.output(self.pins, GPIO.LOW)
 
-    def move_forward(self, duration, delay=0.001):
+    def set_speed(self, new_speed, steps=50):
         """
-        Hace girar el motor hacia adelante durante un tiempo dado.
-        :param duration: Tiempo en segundos para girar el motor.
-        :param delay: Tiempo entre pasos (control de velocidad).
+        Cambia la velocidad gradualmente y ajusta el modo de secuencia si es necesario.
         """
-        start_time = time.time()
-        while time.time() - start_time < duration:
-            for step in self.step_sequence:
-                for pin, value in zip(self.pins, step):
-                    GPIO.output(pin, value)
-                time.sleep(delay)
+        if new_speed == self.speed:
+            return
 
-    def move_backward(self, duration, delay=0.001):
+        speed_diff = (new_speed - self.speed) / steps
+        for _ in range(steps):
+            self.speed += speed_diff
+            time.sleep(0.01)
+            if self.speed > 3.0:
+                self.current_mode = "wave_drive"
+            else:
+                self.current_mode = "full_step"
+        self.speed = new_speed
+
+    def move(self, direction, duration):
         """
-        Hace girar el motor hacia atrás durante un tiempo dado.
-        :param duration: Tiempo en segundos para girar el motor.
-        :param delay: Tiempo entre pasos (control de velocidad).
+        Mueve el motor en la dirección especificada durante un tiempo dado.
         """
+        sequence = self.sequences.get_sequence(self.current_mode)
         start_time = time.time()
         while time.time() - start_time < duration:
-            for step in reversed(self.step_sequence):  # Secuencia invertida
+            delay = 0.001 / self.speed
+            steps = sequence if direction == "forward" else reversed(sequence)
+            for step in steps:
                 for pin, value in zip(self.pins, step):
                     GPIO.output(pin, value)
                 time.sleep(delay)
@@ -58,27 +105,61 @@ class StepperMotor:
         """
         GPIO.cleanup()
 
-# Flujo principal
+
+class MotorControl:
+    """
+    Clase para gestionar el control del motor.
+    """
+    def __init__(self, motor):
+        """
+        Inicializa el controlador del motor.
+        :param motor: Instancia de la clase StepperMotor.
+        """
+        self.motor = motor
+
+    def obtener_datos_usuario(self):
+        """
+        Solicita al usuario la velocidad y el sentido de movimiento.
+        """
+        while True:
+            try:
+                self.motor.speed = float(input("Introduce la velocidad (debe ser un número positivo): "))
+                if self.motor.speed < 0:
+                    print("La velocidad no puede ser negativa. Inténtalo de nuevo.")
+                    continue
+
+                direction = input("Introduce el sentido ('forward' o 'backward'): ").strip().lower()
+                if direction not in ["forward", "backward"]:
+                    print("Por favor, introduce un sentido válido ('forward' o 'backward').")
+                    continue
+
+                return direction
+            except ValueError:
+                print("Entrada no válida. Asegúrate de introducir un número para la velocidad.")
+
+    def ejecutar(self):
+        """
+        Lógica principal para obtener datos del usuario y ejecutar el motor.
+        """
+        try:
+            direction = self.obtener_datos_usuario()
+            print(f"Ejecutando motor: Velocidad = {self.motor.speed}, Sentido = {direction}")
+            self.motor.set_speed(self.motor.speed)
+            self.motor.move(direction, duration=20)
+            self.motor.stop()
+        except KeyboardInterrupt:
+            print("\nPrograma interrumpido por el usuario.")
+        finally:
+            self.motor.cleanup()
+
+
+# Ejemplo de uso
 if __name__ == "__main__":
-    # Pines GPIO y secuencia de pasos
-    PINS = [4, 17, 27, 22]
-    STEP_SEQUENCE = [
-        [1, 0, 0, 0],  # Paso 1
-        [1, 1, 0, 0],  # Paso 2
-        [0, 1, 0, 0],  # Paso 3
-        [0, 1, 1, 0],  # Paso 4
-        [0, 0, 1, 0],  # Paso 5
-        [0, 0, 1, 1],  # Paso 6
-        [0, 0, 0, 1],  # Paso 7
-        [1, 0, 0, 1],  # Paso 8
-    ]
+    # Configuración inicial
+    pins = [4, 17, 27, 22]
+    sequences = StepperSequences()
+    motor = StepperMotor(pins, sequences, speed=1.0)
+    control = MotorControl(motor)
 
-    # Crear instancia del motor
-    motor = StepperMotor(PINS, STEP_SEQUENCE)
-
-    try:
-        motor.move_forward(5)  # Gira hacia adelante durante 5 segundos
-        #motor.move_backward(5)  # Gira hacia atrás durante 5 segundos
-    finally:
-        motor.stop()
-        motor.cleanup()
+    # Ejecutar el control
+    control.ejecutar()
