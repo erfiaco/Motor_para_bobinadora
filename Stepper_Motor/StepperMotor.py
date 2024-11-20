@@ -1,5 +1,7 @@
+import atexit
 import time
 import RPi.GPIO as GPIO
+import math
 
 
 class StepperSequences:
@@ -64,14 +66,18 @@ class StepperMotor:
 
     def set_speed(self, new_speed, steps=50):
         """
-        Cambia la velocidad gradualmente y ajusta el modo de secuencia si es necesario.
+        Cambia la velocidad gradualmente con un aumento logarítmico.
+        :param new_speed: Nueva velocidad objetivo.
+        :param steps: Número de pasos para la transición de velocidad.
         """
         if new_speed == self.speed:
             return
 
-        speed_diff = (new_speed - self.speed) / steps
-        for _ in range(steps):
-            self.speed += speed_diff
+        log_start = math.log(1)  # Evitar log(0)
+        log_end = math.log(steps + 1)
+        for step in range(1, steps + 1):
+            factor = (math.log(step + 1) - log_start) / (log_end - log_start)
+            self.speed = self.speed + factor * (new_speed - self.speed)
             time.sleep(0.01)
             if self.speed > 3.0:
                 self.current_mode = "wave_drive"
@@ -82,15 +88,16 @@ class StepperMotor:
     def move(self, direction, duration):
         """
         Mueve el motor en la dirección especificada durante un tiempo dado.
-        El motor acelera gradualmente desde velocidad 0.
+        El motor acelera gradualmente con un incremento logarítmico.
         """
         target_speed = self.speed
         self.set_speed(0)  # Iniciar desde velocidad 0
         sequence = self.sequences.get_sequence(self.current_mode)
 
         # Aumentar gradualmente hasta la velocidad objetivo
-        steps = 50  # Número de pasos para incrementar la velocidad
-        speed_increment = target_speed / steps
+        steps = 100  # Número de pasos para incrementar la velocidad
+        log_start = math.log(1)  # Evitar log(0)
+        log_end = (math.log(steps + 1))/math.log(101)
         current_speed = 0
         start_time = time.time()
 
@@ -102,9 +109,12 @@ class StepperMotor:
                     GPIO.output(pin, value)
                 time.sleep(delay)
 
-            # Incrementar velocidad gradualmente
+            # Incrementar velocidad logarítmicamente
             if current_speed < target_speed:
-                current_speed += speed_increment
+                step = int((time.time() - start_time) / duration * steps) + 1
+                #factor = (math.log(step + 1) - log_start) / (log_end - log_start) #Logaritmico
+                factor = (1/(1+math.exp(-0.1*(step-50))))/(1/(1+math.exp(-0.1*(50)))) #Sigmoide
+                current_speed = factor * target_speed
                 current_speed = min(current_speed, target_speed)  # Limitar al máximo
 
     def stop(self):
@@ -118,6 +128,7 @@ class StepperMotor:
         Limpia la configuración de GPIO.
         """
         GPIO.cleanup()
+
 
 
 class MotorControl:
@@ -174,6 +185,7 @@ if __name__ == "__main__":
     sequences = StepperSequences()
     motor = StepperMotor(pins, sequences, speed=1.0)
     control = MotorControl(motor)
+    
 
     # Ejecutar el control
     control.ejecutar()

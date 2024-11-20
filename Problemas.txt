@@ -1,0 +1,1 @@
+Cuando cierras con un ctrlz o cierra por error los pines se quedan encendidos y luego hay que resetear el raspberry
