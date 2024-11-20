@@ -1,0 +1,11 @@
+Cambiar la secuencia de pasos a altas velocidades, como pasar de una secuencia completa (full-step sequence) o una media secuencia (half-step sequence) a una secuencia más simple, como la que mencionas, conocida como onda (wave drive sequence), es una estrategia válida y común en ciertas situaciones. Sin embargo, tiene ventajas y desventajas, dependiendo del contexto y tus objetivos.
+
+
+Si lo que realmente buscas es fiabilidad a altas velocidades debido a posibles fallos en el paradigma de secuencia completa, entonces cambiar a una secuencia más simple (como wave drive) tiene sentido. Este cambio puede reducir los problemas asociados con:
+
+Resonancia mecánica: A altas velocidades, los motores pueden entrar en resonancia, lo que afecta la precisión y el rendimiento. Una secuencia más simple puede suavizar estas resonancias.
+Tiempo de respuesta de las bobinas: A velocidades altas, las bobinas pueden no energizarse o desenergizarse completamente entre pasos, causando pérdida de sincronización. La secuencia de onda simplifica este proceso, minimizando el problema.
+Demandas del controlador: Una secuencia completa requiere manejar más transiciones simultáneas. Una secuencia de onda reduce estas demandas, lo que puede evitar problemas de sincronización o latencia.
+
+
+"Para optimizar el rendimiento del motor a distintas velocidades, implementamos dos modos de secuencia: secuencia completa, utilizada a velocidades bajas para maximizar el torque, y secuencia de onda, empleada a velocidades altas para mejorar la fiabilidad."

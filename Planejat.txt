@@ -44,3 +44,20 @@ PLAN DE TRABAJO FUTURO:
    - Crear una biblioteca separada del archivo principal para encapsular esta funcionalidad.
    - Diseñar pruebas para asegurar la correcta integración entre la biblioteca y el archivo principal.
 
+
+Bobimadora:
+
+
+3. Especificaciones Técnicas
+
+    - **Mecánicas:** Estructura de la máquina, soportes, ejes de giro, y componentes móviles.
+    - **Electrónicas:** Motor (paso a paso, servo), controladores, y sensores para contar vueltas.
+    - **Software:** Microcontroladores o sistemas embebidos para el control del bobinado.
+    - **Materiales:** Aluminio, madera o plástico para la base y las partes móviles.
+    
+5. Diseño Modular
+
+    - **Módulo de giro:** Control del motor para bobinar.
+    - **Módulo de guiado:** Sistema para distribuir el alambre uniformemente.
+    - **Interfaz de usuario:** Botones, pantallas, o aplicaciones para ajustar parámetros.
+
