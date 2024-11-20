@@ -2,6 +2,8 @@ import atexit
 import time
 import RPi.GPIO as GPIO
 import math
+from threading import Thread
+
 
 
 class StepperSequences:
@@ -141,6 +143,7 @@ class MotorControl:
         :param motor: Instancia de la clase StepperMotor.
         """
         self.motor = motor
+        self.running = True  # Bandera para controlar el bucle
 
     def obtener_datos_usuario(self):
         """
@@ -149,8 +152,8 @@ class MotorControl:
         while True:
             try:
                 self.motor.speed = float(input("Introduce la velocidad (debe ser un número positivo): "))
-                if self.motor.speed < 0:
-                    print("La velocidad no puede ser negativa. Inténtalo de nuevo.")
+                if self.motor.speed <= 0:
+                    print("La velocidad debe ser mayor que 0. Inténtalo de nuevo.")
                     continue
 
                 direction = input("Introduce el sentido ('forward' o 'backward'): ").strip().lower()
@@ -162,6 +165,24 @@ class MotorControl:
             except ValueError:
                 print("Entrada no válida. Asegúrate de introducir un número para la velocidad.")
 
+    def ajustar_velocidad(self):
+        """
+        Permite cambiar la velocidad del motor dinámicamente mientras está en funcionamiento.
+        """
+        while self.running:
+            try:
+                new_speed = float(input("Introduce la nueva velocidad (mayor que 0): "))
+                if new_speed > 0:
+                    self.motor.set_speed(new_speed)
+                else:
+                    print("La velocidad debe ser mayor que 0.")
+            except ValueError:
+                print("Entrada no válida. Introduce un número válido.")
+            except KeyboardInterrupt:
+                print("\nDeteniendo ajuste de velocidad...")
+                self.running = False
+                break
+
     def ejecutar(self):
         """
         Lógica principal para obtener datos del usuario y ejecutar el motor.
@@ -169,13 +190,27 @@ class MotorControl:
         try:
             direction = self.obtener_datos_usuario()
             print(f"Ejecutando motor: Velocidad = {self.motor.speed}, Sentido = {direction}")
-            self.motor.set_speed(self.motor.speed)
+            
+            # Crear un hilo para ajustar la velocidad dinámicamente
+            
+            speed_thread = Thread(target=self.ajustar_velocidad)
+            speed_thread.start()
+
+            # Iniciar el movimiento del motor
             self.motor.move(direction, duration=20)
+            
+            # Esperar a que el hilo termine
+            speed_thread.join()
             self.motor.stop()
+
         except KeyboardInterrupt:
             print("\nPrograma interrumpido por el usuario.")
+            self.running = False
+            self.motor.stop()
         finally:
             self.motor.cleanup()
+
+
 
 
 # Ejemplo de uso
