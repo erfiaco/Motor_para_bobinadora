@@ -76,8 +76,7 @@ class StepperMotor:
             return
 
         log_start = math.log(1)  # Evitar log(0)
-        #log_end = math.log(steps + 1) #logaritmico
-        log_end =(1/(1+math.exp(-0.1*(step-50))))/(1/(1+math.exp(-0.1*(50)))) #Sigmoide
+        log_end = math.log(steps + 1)
         for step in range(1, steps + 1):
             factor = (math.log(step + 1) - log_start) / (log_end - log_start)
             self.speed = self.speed + factor * (new_speed - self.speed)
