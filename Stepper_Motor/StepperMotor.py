@@ -218,15 +218,19 @@ class MotorControl:
             # Iniciar el movimiento del motor
             self.motor.move(direction, duration=20)
             
+            
             # Esperar a que el hilo termine
             speed_thread.join()
             self.motor.stop()
+            
+            
 
         except KeyboardInterrupt:
             print("\nPrograma interrumpido por el usuario.")
+            print(f"Cambios de estado totales: {motor.state_changes/2048/2}")
             self.running = False
             self.motor.stop()
-            print(f"Cambios de estado totales: {motor.state_changes}")
+            
         finally:
             self.motor.cleanup()
 
@@ -245,3 +249,4 @@ if __name__ == "__main__":
 
     # Ejecutar el control
     control.ejecutar()
+    
