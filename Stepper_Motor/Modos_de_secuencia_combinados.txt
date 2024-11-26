@@ -9,3 +9,30 @@ Demandas del controlador: Una secuencia completa requiere manejar más transicio
 
 
 "Para optimizar el rendimiento del motor a distintas velocidades, implementamos dos modos de secuencia: secuencia completa, utilizada a velocidades bajas para maximizar el torque, y secuencia de onda, empleada a velocidades altas para mejorar la fiabilidad."
+
+
+1. Secuencia completa con una bobina activa (1-0-0-0, 0-1-0-0, etc.):
+En esta secuencia, solo se activa una bobina a la vez.
+Esto generalmente se llama unipolar en secuencia completa o simplemente "paso completo".
+Si tienes 4 bobinas (o polos electromagnéticos) como en un motor típico con 4 fases (por ejemplo, A, B, A', B'), un ciclo completo de activación (1-0-0-0 → 0-1-0-0 → 0-0-1-0 → 0-0-0-1) equivale a 4 pasos.
+En este caso, el eje del motor avanza un incremento angular por cada paso. Si el motor tiene, por ejemplo, 200 pasos por revolución, cada paso equivale a 1.8°.
+
+2. Secuencia completa con dos bobinas activas (1-1-0-0, 0-1-1-0, etc.):
+En esta secuencia, siempre se activan dos bobinas adyacentes al mismo tiempo.
+Esto se conoce como secuencia completa con mayor torque, ya que al usar dos bobinas, el campo magnético resultante tiene mayor fuerza.
+Con 4 combinaciones posibles (1-1-0-0 → 0-1-1-0 → 0-0-1-1 → 1-0-0-1), también equivale a 4 pasos. El ángulo por paso es idéntico al caso anterior.
+
+3. Media secuencia (1-0-0-0, 1-1-0-0, 0-1-0-0, etc.):
+Aquí se combinan pasos con una bobina activa y pasos con dos bobinas activas.
+Esto da lugar a un número doble de pasos en un ciclo completo: 8 pasos por ciclo de activación de las bobinas.
+Si el motor tiene 200 pasos por revolución en secuencia completa, en media secuencia tendrá 400 pasos por revolución, y cada paso equivaldrá a 0.9°.
+Entonces, respondiendo a tu duda:
+En secuencia completa, ya sea con una bobina activa o dos bobinas activas, hablamos siempre de 4 pasos por ciclo completo de activación en un motor de 4 fases.
+En media secuencia, se generan 8 pasos por ciclo completo.
+Espero que esto aclare el funcionamiento. Si estás programando o simulando, puedo ayudarte con el código o con la configuración en tu driver. 😊
+
+¿A qué se refiere los 200 pasos por revolución?
+
+Depende del diseño interno del motor (cuántos dientes tiene) y de la reducción de la trnasmisión de los engranajes
+Sin engranajes: Los 200 pasos por revolución son resultado del diseño interno del motor.
+Con engranajes: Los pasos por revolución del eje de salida dependen tanto de los pasos nativos del motor como de la relación de transmisión de los engranajes.

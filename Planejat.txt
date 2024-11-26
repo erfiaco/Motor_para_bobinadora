@@ -61,3 +61,4 @@ Bobimadora:
     - **Módulo de guiado:** Sistema para distribuir el alambre uniformemente.
     - **Interfaz de usuario:** Botones, pantallas, o aplicaciones para ajustar parámetros.
 
+
