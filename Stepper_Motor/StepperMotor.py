@@ -99,7 +99,7 @@ class StepperMotor:
             self.speed = self.speed + factor * (new_speed - self.speed)
             time.sleep(0.01)
             if self.speed > 3.0:
-                self.current_mode = "wave_drive"
+                self.current_mode = "full_step"
             else:
                 self.current_mode = "full_step"
         self.speed = new_speed
