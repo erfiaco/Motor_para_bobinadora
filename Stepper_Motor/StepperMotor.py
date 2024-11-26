@@ -6,6 +6,7 @@ from threading import Thread
 
 
 
+
 class StepperSequences:
     """
     Clase para gestionar las secuencias de pasos del motor.
@@ -57,6 +58,13 @@ class StepperMotor:
         self.speed = speed
         self.current_mode = "full_step"  # Modo inicial
         self.setup()
+        self.state_changes = 0
+        
+        
+        
+        # Definimos los parámetros del motor
+        self.steps_per_revolution = 2048  # Número de pasos por revolución
+        self.engranaje = 64              # Relación de engranaje, si aplica
 
     def setup(self):
         """
@@ -65,6 +73,15 @@ class StepperMotor:
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.pins, GPIO.OUT)
         GPIO.output(self.pins, GPIO.LOW)
+        
+    def parametros(self):
+        """
+        Devuelve los parámetros del motor. es un diccionario.
+        """
+        return {
+            "steps_per_revolution": self.steps_per_revolution,
+            "engranaje": self.engranaje
+        }
 
     def set_speed(self, new_speed, steps=50):
         """
@@ -95,6 +112,7 @@ class StepperMotor:
         target_speed = self.speed
         self.set_speed(0)  # Iniciar desde velocidad 0
         sequence = self.sequences.get_sequence(self.current_mode)
+        
 
         # Aumentar gradualmente hasta la velocidad objetivo
         steps = 100  # Número de pasos para incrementar la velocidad
@@ -110,6 +128,7 @@ class StepperMotor:
                 for pin, value in zip(self.pins, step):
                     GPIO.output(pin, value)
                 time.sleep(delay)
+                self.state_changes += 1
 
             # Incrementar velocidad logarítmicamente
             if current_speed < target_speed:
@@ -207,8 +226,10 @@ class MotorControl:
             print("\nPrograma interrumpido por el usuario.")
             self.running = False
             self.motor.stop()
+            print(f"Cambios de estado totales: {motor.state_changes}")
         finally:
             self.motor.cleanup()
+
 
 
 
