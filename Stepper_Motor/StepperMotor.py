@@ -59,6 +59,7 @@ class StepperMotor:
         self.current_mode = "full_step"  # Modo inicial
         self.setup()
         self.state_changes = 0
+        self.start_time = time.time()
         
         
         
@@ -119,10 +120,10 @@ class StepperMotor:
         log_start = math.log(1)  # Evitar log(0)
         log_end = (math.log(steps + 1))/math.log(101)
         current_speed = 0
-        start_time = time.time()
+        self.start_time = time.time()
 
-        while time.time() - start_time < duration:
-            delay = 0.001 / current_speed if current_speed > 0 else 0.1
+        while time.time() - self.start_time < duration:
+            delay = 1 / (current_speed*2048) if current_speed > 0 else 0.1
             steps_sequence = sequence if direction == "forward" else reversed(sequence)
             for step in steps_sequence:
                 for pin, value in zip(self.pins, step):
@@ -132,9 +133,10 @@ class StepperMotor:
 
             # Incrementar velocidad logarítmicamente
             if current_speed < target_speed:
-                step = int((time.time() - start_time) / duration * steps) + 1
+                step = int((time.time() - self.start_time) / duration * steps) + 1
                 #factor = (math.log(step + 1) - log_start) / (log_end - log_start) #Logaritmico
                 factor = (1/(1+math.exp(-0.1*(step-50))))/(1/(1+math.exp(-0.1*(50)))) #Sigmoide
+                #factor = 1
                 current_speed = factor * target_speed
                 current_speed = min(current_speed, target_speed)  # Limitar al máximo
 
@@ -228,6 +230,7 @@ class MotorControl:
         except KeyboardInterrupt:
             print("\nPrograma interrumpido por el usuario.")
             print(f"Cambios de estado totales: {motor.state_changes/2048/2}")
+            print(f"tiempo: {time.time() - motor.start_time}")
             self.running = False
             self.motor.stop()
             
