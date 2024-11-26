@@ -59,7 +59,7 @@ class StepperMotor:
         self.current_mode = "full_step"  # Modo inicial
         self.setup()
         self.state_changes = 0
-        self.start_time = time.time()
+        
         
         
         
@@ -108,37 +108,55 @@ class StepperMotor:
     def move(self, direction, duration):
         """
         Mueve el motor en la dirección especificada durante un tiempo dado.
-        El motor acelera gradualmente con un incremento logarítmico.
+        El motor cambia dinámicamente entre modos según el delay.
         """
         target_speed = self.speed
         self.set_speed(0)  # Iniciar desde velocidad 0
-        sequence = self.sequences.get_sequence(self.current_mode)
+        current_speed = 0
+        #sequence = self.sequences.get_sequence(self.current_mode)
         
-
+        
         # Aumentar gradualmente hasta la velocidad objetivo
         steps = 100  # Número de pasos para incrementar la velocidad
         log_start = math.log(1)  # Evitar log(0)
         log_end = (math.log(steps + 1))/math.log(101)
         current_speed = 0
+        
         self.start_time = time.time()
 
         while time.time() - self.start_time < duration:
-            delay = 1 / (current_speed*2048) if current_speed > 0 else 0.1
+            # Calcular el delay actual
+            self.delay = 1 / (current_speed * 2048 * 4) if current_speed > 0 else 0.1
+
+            # Cambiar de modo según el delay
+            if self.delay < 0.0001:
+                self.current_mode = "wave_drive"
+            else:
+                self.current_mode = "full_step"
+
+            # Obtener la secuencia correspondiente al modo actual
+            sequence = self.sequences.get_sequence(self.current_mode)
+
+            # Ejecutar los pasos en la secuencia
             steps_sequence = sequence if direction == "forward" else reversed(sequence)
+            
             for step in steps_sequence:
+                
                 for pin, value in zip(self.pins, step):
                     GPIO.output(pin, value)
-                time.sleep(delay)
+                time.sleep(self.delay)
                 self.state_changes += 1
 
             # Incrementar velocidad logarítmicamente
             if current_speed < target_speed:
-                step = int((time.time() - self.start_time) / duration * steps) + 1
+                step = int((time.time() - self.start_time) / duration * 100) + 1
                 #factor = (math.log(step + 1) - log_start) / (log_end - log_start) #Logaritmico
-                factor = (1/(1+math.exp(-0.1*(step-50))))/(1/(1+math.exp(-0.1*(50)))) #Sigmoide
+                factor = (1 / (1 + math.exp(-0.1 * (step - 50)))) / (1 / (1 + math.exp(-0.1 * (50)))) #Sigmoide
                 #factor = 1
                 current_speed = factor * target_speed
-                current_speed = min(current_speed, target_speed)  # Limitar al máximo
+                current_speed = min(current_speed, target_speed)
+
+
 
     def stop(self):
         """
