@@ -126,7 +126,7 @@ class StepperMotor:
 
         while time.time() - self.start_time < duration:
             # Calcular el delay actual
-            self.delay = 1 / (current_speed * 2048 * 4) if current_speed > 0 else 0.1
+            self.delay = (1 / (current_speed * self.steps_per_revolution)) if current_speed > 0 else 0.1
 
             # Cambiar de modo según el delay
             if self.delay < 0.0001:
