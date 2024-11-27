@@ -4,9 +4,6 @@ import RPi.GPIO as GPIO
 import math
 from threading import Thread
 
-
-
-
 class StepperSequences:
     """
     Clase para gestionar las secuencias de pasos del motor.
@@ -60,9 +57,6 @@ class StepperMotor:
         self.setup()
         self.state_changes = 0
         
-        
-        
-        
         # Definimos los parámetros del motor
         self.steps_per_revolution = 2048  # Número de pasos por revolución
         self.engranaje = 64              # Relación de engranaje, si aplica
@@ -83,6 +77,22 @@ class StepperMotor:
             "steps_per_revolution": self.steps_per_revolution,
             "engranaje": self.engranaje
         }
+    def medir_velocidad(self, duration=1.0):
+        '''
+        Mide la velocidad del motor en revoluciones por segundo (RPS).
+        '''
+        initial_state_changes = self.state_changes  # Registrar el estado inicial
+        time.sleep(duration)  # Esperar el tiempo definido
+        final_state_changes = self.state_changes  # Registrar el estado final
+
+        # Calcular el número de pasos realizados
+        steps = final_state_changes - initial_state_changes
+
+        # Calcular revoluciones por segundo (RPS)
+        revolutions = steps / self.steps_per_revolution
+        rps = revolutions / duration
+
+        return rps 
 
     def set_speed(self, new_speed, steps=50):
         """
@@ -183,6 +193,8 @@ class MotorControl:
         """
         self.motor = motor
         self.running = True  # Bandera para controlar el bucle
+        self.medicion_activa = False  # Bandera para el hilo de medición
+        self.velocidades = []  # Lista para almacenar las velocidades medidas
 
     def obtener_datos_usuario(self):
         """
@@ -221,6 +233,39 @@ class MotorControl:
                 print("\nDeteniendo ajuste de velocidad...")
                 self.running = False
                 break
+                
+    
+    def medir_continuamente(self, interval):
+        """
+        Método ejecutado en un hilo para medir la velocidad continuamente.
+        :param interval: Intervalo de tiempo entre mediciones.
+        """
+        while self.medicion_activa:
+            rps = self.motor.medir_velocidad(duration=interval)
+            self.velocidades.append(rps)
+            print(f"Velocidad medida: {rps:.2f} RPS")
+            time.sleep(interval)
+
+    def iniciar_medicion_continua(self, interval=1.0):
+        """
+        Inicia un hilo separado para medir la velocidad del motor continuamente.
+        :param interval: Intervalo de tiempo entre mediciones.
+        """
+        self.medicion_activa = True
+        self.hilo_medicion = Thread(target=self.medir_continuamente, args=(interval,))
+        self.hilo_medicion.daemon = True
+        self.hilo_medicion.start()
+
+    def detener_medicion_continua(self):
+        """
+        Detiene el hilo de medición continua.
+        """
+        self.medicion_activa = False
+        if hasattr(self, 'hilo_medicion') and self.hilo_medicion.is_alive():
+            self.hilo_medicion.join()
+        print("Medición continua detenida.")
+
+
 
     def ejecutar(self):
         """
@@ -230,27 +275,44 @@ class MotorControl:
             direction = self.obtener_datos_usuario()
             print(f"Ejecutando motor: Velocidad = {self.motor.speed}, Sentido = {direction}")
             
+                       
+            # Iniciar la medición continua
+            self.iniciar_medicion_continua(interval=1.0)
+            
             # Crear un hilo para ajustar la velocidad dinámicamente
             
             speed_thread = Thread(target=self.ajustar_velocidad)
             speed_thread.start()
-
+            
             # Iniciar el movimiento del motor
             self.motor.move(direction, duration=20)
             
             
-            # Esperar a que el hilo termine
+            
+                
+            
+            
+            # Esperar a que el hilo de ajuste de velocidad termine
             speed_thread.join()
-            self.motor.stop()
+            
+            # Detener la medición continua
+            self.detener_medicion_continua()
+            
+            # Mostrar las mediciones finales
+            print(f"Mediciones finales: {self.velocidades}")
+            
+            
             
             
 
         except KeyboardInterrupt:
             print("\nPrograma interrumpido por el usuario.")
-            print(f"Cambios de estado totales: {motor.state_changes/2048/2}")
+            print(f"Revoluciones: {motor.state_changes/2048/2}")
             print(f"tiempo: {time.time() - motor.start_time}")
+            print(f"Mediciones finales: {self.velocidades}")
             self.running = False
             self.motor.stop()
+            self.detener_medicion_continua()
             
         finally:
             self.motor.cleanup()
