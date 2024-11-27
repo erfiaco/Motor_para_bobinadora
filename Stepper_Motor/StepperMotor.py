@@ -3,6 +3,7 @@ import time
 import RPi.GPIO as GPIO
 import math
 from threading import Thread
+from LCD_I2C import write
 
 class StepperSequences:
     """
@@ -310,6 +311,7 @@ class MotorControl:
             print(f"Revoluciones: {motor.state_changes/2048/2}")
             print(f"tiempo: {time.time() - motor.start_time}")
             print(f"Mediciones finales: {self.velocidades}")
+            write("hello",1)
             self.running = False
             self.motor.stop()
             self.detener_medicion_continua()
