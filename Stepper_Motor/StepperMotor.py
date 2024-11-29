@@ -3,7 +3,7 @@ import time
 import RPi.GPIO as GPIO
 import math
 from threading import Thread
-from LCD_I2C import write
+import LCD_I2C_classe as LCD
 
 class StepperSequences:
     """
@@ -196,6 +196,7 @@ class MotorControl:
         self.running = True  # Bandera para controlar el bucle
         self.medicion_activa = False  # Bandera para el hilo de medición
         self.velocidades = []  # Lista para almacenar las velocidades medidas
+        self.lcd = LCD.LCD_I2C()
 
     def obtener_datos_usuario(self):
         """
@@ -244,8 +245,10 @@ class MotorControl:
         while self.medicion_activa:
             rps = self.motor.medir_velocidad(duration=interval)
             self.velocidades.append(rps)
-            print(f"Velocidad medida: {rps:.2f} RPS")
-            time.sleep(interval)
+            self.lcd.write(f"Velocidad: {rps:.2f} RPS", 1)
+            
+            time.sleep(2)
+            self.lcd.clear()
 
     def iniciar_medicion_continua(self, interval=1.0):
         """
@@ -300,7 +303,11 @@ class MotorControl:
             self.detener_medicion_continua()
             
             # Mostrar las mediciones finales
-            print(f"Mediciones finales: {self.velocidades}")
+            self.lcd.clear()
+            self.lcd.write(f"Vel final: {self.velocidades}",1)
+            time.sleep(2)
+            self.lcd.clear()
+            
             
             
             
@@ -311,13 +318,15 @@ class MotorControl:
             print(f"Revoluciones: {motor.state_changes/2048/2}")
             print(f"tiempo: {time.time() - motor.start_time}")
             print(f"Mediciones finales: {self.velocidades}")
-            write("hello",1)
+            
             self.running = False
             self.motor.stop()
             self.detener_medicion_continua()
+            self.lcd.clear()
             
         finally:
             self.motor.cleanup()
+            self.lcd.clear()
 
 
 

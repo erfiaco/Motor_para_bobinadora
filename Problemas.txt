@@ -1,1 +1,3 @@
 Cuando cierras con un ctrlz o cierra por error los pines se quedan encendidos y luego hay que resetear el raspberry
+
+Cuando bajo la velocidad para cambiar el tipo de secuencia de motor, este se bloquea antes de llegar a 0.34 rev por segundos. supongo que no esta funcionando la transicion. Si lo dejo en full-sequence, llega hasta 64 incluso podría subir más pero no lo he testeado.

@@ -1,0 +1,17 @@
+Para utilizar el LCD (la clase de Pere LCD_I2C_classe.py) hay uqe habilitar el i2C en config de la raspberry:
+
+Ejecuta en la terminal:
+sudo raspi-config
+
+Navega a:
+
+Interfacing Options -> I2C -> Enable
+
+sudo reboot.
+
+
+Ahora confirma que esta habilitado:
+
+sudo i2cdetect -y 1
+
+te saldrá una matriz, asegurate que el número que aparece coincide con el de la clase de Pere
