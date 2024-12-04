@@ -59,30 +59,29 @@ class StepperMotor:
         :param steps: Numero de pasos para alcanzar la velocidad deseada.
         :return: Lista de valores de delay.
         """
-        min_delay = 0.001
+        min_delay = 0.01
+        target_delay = 1 / (self.steps_per_revolution * self.speed)
+        steps = 400  # Número de pasos para el cambio lineal
         
         self.delays = []  # Lista para almacenar los valores de delay
-        for _ in range(1000):
-            # Factor de incremento proporcional
-            factor = _ / 101  # Escala entre 0 y 1
-            # Calcular el delay
-            delay = factor * (1 / (self.speed * self.steps_per_revolution))
 
+        # Bucle para calcular y usar el delay interpolado
+        for i in range(steps):
+            # Calcular el delay actual redondeado a 5 decimales
+            current_delay = round(min_delay + i * (target_delay - min_delay) / (steps - 1), 5) #funcion lineal
+        
+            
             # Guardar el delay en la lista
-            self.delays.append(delay)
-
-        return delays   
+            self.delays.append(current_delay)   
 
     
 
     def move(self, direction, speed):
         """
         Mueve el motor en la direccion especificada indefinidamente.
-        :param direction: 'fw' o 'bw'.
+        
         """
-        target_speed = self.speed
-        #self.set_speed(0)  # Iniciar desde velocidad 0
-        current_speed = 0
+        
         
         #Gestiona el sentido del movimiento
         if direction == "fw":  
@@ -92,10 +91,11 @@ class StepperMotor:
         else:
             raise ValueError("Direccion invalida. Usa 'fw' o 'bw'.")
         
-            
+        self.calculate_delays()    
         self.running = True
         i = 0
-            while self.running:
+            
+        while self.running:
             GPIO.output(self.step_pin, GPIO.HIGH)
             time.sleep(self.delays[i] / 2)  # Usar delay correspondiente
             GPIO.output(self.step_pin, GPIO.LOW)
@@ -105,9 +105,7 @@ class StepperMotor:
             # Incrementar `i` solo si aún no ha alcanzado el último índice
             if i < len(self.delays) - 1:  # Último índice es len(self.delays) - 1
                 i += 1
-            else:
-                i = len(self.delays) - 1  # Mantener el índice en el máximo
-
+            
 
     def stop(self):
         """
@@ -216,6 +214,7 @@ class MotorControl:
             self.iniciar_medicion_continua(interval=1.0)
             speed_thread = Thread(target=self.ajustar_velocidad)
             speed_thread.start()
+            
             self.motor.move(direction, self.motor.speed)
             speed_thread.join()
             self.detener_medicion_continua()
