@@ -3,6 +3,7 @@ import time
 import RPi.GPIO as GPIO
 import math
 from threading import Thread
+from threading import Lock
 import LCD_I2C_classe as LCD
 
 
@@ -11,7 +12,7 @@ class StepperMotor:
     """
     Clase para controlar un motor paso a paso bipolar con un controlador como DRV8825 o A4988.
     """
-    def __init__(self, step_pin, dir_pin, speed=1.0):
+    def __init__(self, step_pin, dir_pin, steps_per_revolution=200, speed=1.0):
         """
         Inicializa el motor paso a paso.
         :param step_pin: Pin GPIO para la señal de paso (STEP).
@@ -23,12 +24,20 @@ class StepperMotor:
         self.dir_pin = dir_pin
         self.steps_per_revolution = 200
         self.speed = speed  # En revoluciones por segundo
+        self.speed_lock = Lock()
         self.current_speed = 0
         self.state_changes = 0
         self.setup()
         self.running = False  # Bandera para controlar el bucle del motor
+        self.delays = []  # Lista para almacenar los valores de delay
         
-       
+    def set_speed(self, new_speed):
+        with self.speed_lock:
+            self.speed = new_speed
+
+    def get_speed(self):
+        with self.speed_lock:
+            return self.speed
 
     def setup(self):
         """
@@ -59,18 +68,19 @@ class StepperMotor:
         :param steps: Numero de pasos para alcanzar la velocidad deseada.
         :return: Lista de valores de delay.
         """
-    
-        self.delays = []  # Lista para almacenar los valores de delay
-        for _ in range(1, 101):
+        
+        
+        for _ in range(1200):
             # Factor de incremento proporcional
-            factor = _ / 101  # Escala entre 0 y 1
+            #factor = (_ + 1)/ 1200  # Escala entre 0 y 1
+            factor = 1
             # Calcular el delay
-            delay = factor * (1 / (self.speed * self.steps_per_revolution))
-
+            delay = 0.002 #factor * (1 / (self.speed * self.steps_per_revolution))
+        
             # Guardar el delay en la lista
             self.delays.append(delay)
-
-        return delays   
+        print(f"Delays generados: {len(self.delays)} elementos, ejemplo: {self.delays[:5]}")
+        return self.delays   
 
     
 
@@ -93,16 +103,33 @@ class StepperMotor:
         
             
         self.running = True
-
+        
+        i=0
         while self.running:
+         
+            while  i < len(self.delays) :
             
-            i=1
-            GPIO.output(self.step_pin, GPIO.HIGH)
-            time.sleep(self.delays[i]/2
-            GPIO.output(self.step_pin, GPIO.LOW)
-            time.sleep(self.delays[i] / 2)
-            self.state_changes += 1
-            if i < 101:  i += i else: i = 100
+                GPIO.output(STEP_PIN, GPIO.HIGH)
+                time.sleep(step_delay)  # Tiempo en HIGH
+                GPIO.output(STEP_PIN, GPIO.LOW)
+                time.sleep(step_delay)  # Tiempo en LOW
+            
+            
+            """                 
+                GPIO.output(self.step_pin, GPIO.HIGH)
+                time.sleep(self.delays[i] / 2)
+                GPIO.output(self.step_pin, GPIO.LOW)
+                time.sleep(self.delays[i] / 2)
+                self.state_changes += 1
+                i += 1  # Incrementar i para evitar un bucle infinito
+               
+            if len(self.delays) > 0:
+                GPIO.output(self.step_pin, GPIO.HIGH)
+                time.sleep(self.delays[-1] / 2)  # Último elemento de la lista
+                GPIO.output(self.step_pin, GPIO.LOW)
+                time.sleep(self.delays[-1] / 2)
+            """
+                
 
     def stop(self):
         """
