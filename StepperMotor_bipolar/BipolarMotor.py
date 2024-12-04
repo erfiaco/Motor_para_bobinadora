@@ -70,7 +70,7 @@ class StepperMotor:
         """
         
         
-        for _ in range(1200):
+        for _ in range(100):
             # Factor de incremento proporcional
             #factor = (_ + 1)/ 1200  # Escala entre 0 y 1
             factor = 1
@@ -101,7 +101,8 @@ class StepperMotor:
         else:
             raise ValueError("Direccion invalida. Usa 'fw' o 'bw'.")
         
-            
+        
+        self.calculate_delays()    
         self.running = True
         
         i=0
@@ -110,9 +111,9 @@ class StepperMotor:
             while  i < len(self.delays) :
             
                 GPIO.output(STEP_PIN, GPIO.HIGH)
-                time.sleep(step_delay)  # Tiempo en HIGH
+                time.sleep(self.delays[i])  # Tiempo en HIGH
                 GPIO.output(STEP_PIN, GPIO.LOW)
-                time.sleep(step_delay)  # Tiempo en LOW
+                time.sleep(self.delays[i])  # Tiempo en LOW
             
             
             """                 

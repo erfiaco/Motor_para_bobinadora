@@ -1,6 +1,8 @@
 import RPi.GPIO as GPIO
 import time
 import math
+from threading import Thread
+import LCD_I2C_classe as LCD
 
 
 class Nema17Motor:
@@ -23,6 +25,7 @@ class Nema17Motor:
         self.ms3_pin = ms3_pin
         self.steps_per_rev = steps_per_rev
         self.max_delay = max_delay
+        self.state_changes = 0  # Contador de pasos generados
 
         # Configuración de los pines GPIO
         GPIO.setmode(GPIO.BCM)
@@ -108,18 +111,53 @@ class Nema17Motor:
                 time.sleep(step_delay)
                 GPIO.output(self.step_pin, GPIO.LOW)
                 time.sleep(step_delay)
+                self.state_changes += 1  # Incrementar el contador de pasos
+                time.sleep(step_delay)
     
                 step += 1
     
         except KeyboardInterrupt:
             print("\nMovimiento interrumpido por el usuario.")
+    
+    def medir_velocidad(self, duration=1.0):
+        """
+        Mide la velocidad del motor en revoluciones por segundo (RPS).
+        :param duration: Duración en segundos para medir la velocidad.
+        :return: Velocidad en RPS.
+        """
+        initial_state_changes = self.state_changes  # Registrar el estado inicial
+        time.sleep(duration)  # Esperar el tiempo definido
+        final_state_changes = self.state_changes  # Registrar el estado final
 
+        # Calcular el número de pasos realizados
+        steps = (final_state_changes - initial_state_changes) // 2  # Cada paso tiene dos cambios de estado
+
+        # Calcular revoluciones por segundo (RPS)
+        revolutions = steps / self.steps_per_rev
+        rps = revolutions / duration
+
+        return rps
+    
     def cleanup(self):
         """Limpia los pines GPIO."""
         GPIO.cleanup()
 
 
+from threading import Thread
+import time
+
 class UserInputHandler:
+    def __init__(self, motor, lcd=LCD):
+        """
+        Clase para manejar la interacción con el usuario y medir velocidades continuamente.
+        :param motor: Instancia de la clase Nema17Motor.
+        :param lcd: Instancia opcional de un controlador de LCD para mostrar información.
+        """
+        self.motor = motor
+        self.lcd = LCD.LCD_I2C()  # LCD opcional para mostrar datos
+        self.medicion_activa = False  # Estado de medición continua
+        self.velocidades = []  # Almacén de velocidades medidas
+
     @staticmethod
     def get_direction():
         """Solicita la dirección del giro al usuario."""
@@ -143,33 +181,109 @@ class UserInputHandler:
             except ValueError:
                 print("Por favor, ingrese un número válido.")
 
+    def medir_continuamente(self, interval):
+        """
+        Método ejecutado en un hilo para medir la velocidad continuamente.
+        :param interval: Intervalo de tiempo entre mediciones.
+        """
+        while self.medicion_activa:
+            rps = self.motor.medir_velocidad(duration=interval)
+            self.velocidades.append(rps)
 
-# Función principal
-def main():
+            if self.lcd:
+                self.lcd.write(f"Velocidad: {rps:.2f} RPS", 1)  # Mostrar en LCD (si está disponible)
+                time.sleep(2)
+                self.lcd.clear()
+            else:
+                print(f"Velocidad medida: {rps:.2f} RPS")  # Mostrar en consola como alternativa
 
-    # Crear instancia del motor con los pines de microstepping
-    motor = Nema17Motor(step_pin=17, dir_pin=27, ms1_pin=5, ms2_pin=6, ms3_pin=13)
+            time.sleep(interval)
 
-    try:
-        # Solicitar datos al usuario
-        print("Configuración del movimiento continuo del motor:")
-        direction = UserInputHandler.get_direction()
-        target_rps = UserInputHandler.get_rps()
+    def iniciar_medicion_continua(self, interval=1.0):
+        """
+        Inicia un hilo separado para medir la velocidad del motor continuamente.
+        :param interval: Intervalo de tiempo entre mediciones.
+        """
+        if self.medicion_activa:
+            print("La medición continua ya está activa.")
+            return
 
-        print(f"Iniciando movimiento continuo con aceleración suave y microstepping dinámico:")
-        print(f"Dirección: {'Horario' if direction else 'Antihorario'}, Velocidad objetivo: {target_rps:.2f} RPS.")
-        #motor.move_continuous(direction=direction, target_rps=target_rps)
-        motor.move_continuous(direction=direction, target_rps=target_rps, acceleration_steps=800, min_target_rps=0.2)
+        self.medicion_activa = True
+        self.hilo_medicion = Thread(target=self.medir_continuamente, args=(interval,))
+        self.hilo_medicion.daemon = True  # Finaliza automáticamente con el programa principal
+        self.hilo_medicion.start()
+        print("Medición continua iniciada.")
+
+    def detener_medicion_continua(self):
+        """
+        Detiene el hilo de medición continua.
+        """
+        self.medicion_activa = False
+        if hasattr(self, 'hilo_medicion') and self.hilo_medicion.is_alive():
+            self.hilo_medicion.join()
+        print("Medición continua detenida.")
+        
+    def ejecutar(self):
+        """
+        Lógica principal para obtener datos del usuario y ejecutar el motor.
+        """
+        try:
+             # Solicitar datos al usuario
+            print("Configuración del movimiento continuo del motor:")
+            direction = UserInputHandler.get_direction()
+            target_rps = UserInputHandler.get_rps()
+        
+            print(f"Ejecutando motor: Velocidad = {self.motor.speed}, Sentido = {direction}")
+            
+                       
+            # Iniciar la medición continua
+            self.iniciar_medicion_continua(interval=1.0)
+            
+            # Crear un hilo para ajustar la velocidad dinámicamente
+            '''
+            speed_thread = Thread(target=self.ajustar_velocidad)
+            speed_thread.start()
+            '''
+            
+            # Iniciar el movimiento del motor
+            self.motor.move_continuous(direction=direction, target_rps=target_rps, acceleration_steps=800, min_target_rps=0.2)
+            
+            # Detener la medición continua
+            self.detener_medicion_continua() 
+            
+            
+                
+            
+            '''
+            # Esperar a que el hilo de ajuste de velocidad termine
+            speed_thread.join()
+            '''
+            
+            # Detener la medición continua
+            self.detener_medicion_continua()
+            
+            # Mostrar las mediciones finales
+            self.lcd.clear()
+            self.lcd.write(f"Vel final: {self.velocidades}",1)
+            time.sleep(2)
+            self.lcd.clear()
+            
+        except KeyboardInterrupt:
+            print("\nMovimiento interrumpido por el usuario.")
+
+        finally:
+            motor.cleanup()
+            print("GPIO limpio. Programa terminado.")
 
 
-    except KeyboardInterrupt:
-        print("\nMovimiento interrumpido por el usuario.")
 
-    finally:
-        motor.cleanup()
-        print("GPIO limpio. Programa terminado.")
+
 
 
 
 if __name__ == "__main__":
-    main()
+    
+    # Crear instancia del motor con los pines de microstepping
+    motor = Nema17Motor(step_pin=17, dir_pin=27, ms1_pin=5, ms2_pin=6, ms3_pin=13)
+    control = UserInputHandler(motor, lcd = lcd)
+    control.ejecutar()
