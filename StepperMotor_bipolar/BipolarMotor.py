@@ -70,12 +70,12 @@ class StepperMotor:
         """
         
         
-        for _ in range(100):
+        for _ in range(2000):
             # Factor de incremento proporcional
-            #factor = (_ + 1)/ 1200  # Escala entre 0 y 1
-            factor = 1
+            factor = (_ + 1)/ 2000  # Escala entre 0 y 1
+            #factor = 1
             # Calcular el delay
-            delay = 0.002 #factor * (1 / (self.speed * self.steps_per_revolution))
+            delay = factor * (1 / (self.speed * self.steps_per_revolution))
         
             # Guardar el delay en la lista
             self.delays.append(delay)
@@ -110,13 +110,13 @@ class StepperMotor:
          
             while  i < len(self.delays) :
             
-                GPIO.output(STEP_PIN, GPIO.HIGH)
+                GPIO.output(step_pin, GPIO.HIGH)
                 time.sleep(self.delays[i])  # Tiempo en HIGH
-                GPIO.output(STEP_PIN, GPIO.LOW)
+                GPIO.output(step_pin, GPIO.LOW)
                 time.sleep(self.delays[i])  # Tiempo en LOW
             
             
-            """                 
+                             
                 GPIO.output(self.step_pin, GPIO.HIGH)
                 time.sleep(self.delays[i] / 2)
                 GPIO.output(self.step_pin, GPIO.LOW)
@@ -129,7 +129,7 @@ class StepperMotor:
                 time.sleep(self.delays[-1] / 2)  # Último elemento de la lista
                 GPIO.output(self.step_pin, GPIO.LOW)
                 time.sleep(self.delays[-1] / 2)
-            """
+            
                 
 
     def stop(self):
