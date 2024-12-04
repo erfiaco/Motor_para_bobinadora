@@ -11,7 +11,7 @@ class StepperMotor:
     """
     Clase para controlar un motor paso a paso bipolar con un controlador como DRV8825 o A4988.
     """
-    def __init__(self, step_pin, dir_pin, speed=1.0):
+    def __init__(self, step_pin, dir_pin, speed):
         """
         Inicializa el motor paso a paso.
         :param step_pin: Pin GPIO para la señal de paso (STEP).
@@ -59,9 +59,10 @@ class StepperMotor:
         :param steps: Numero de pasos para alcanzar la velocidad deseada.
         :return: Lista de valores de delay.
         """
-    
+        min_delay = 0.001
+        
         self.delays = []  # Lista para almacenar los valores de delay
-        for _ in range(1, 101):
+        for _ in range(1000):
             # Factor de incremento proporcional
             factor = _ / 101  # Escala entre 0 y 1
             # Calcular el delay
@@ -74,12 +75,12 @@ class StepperMotor:
 
     
 
-    def move(self, direction):
+    def move(self, direction, speed):
         """
         Mueve el motor en la direccion especificada indefinidamente.
         :param direction: 'fw' o 'bw'.
         """
-        #target_speed = self.speed
+        target_speed = self.speed
         #self.set_speed(0)  # Iniciar desde velocidad 0
         current_speed = 0
         
@@ -93,16 +94,20 @@ class StepperMotor:
         
             
         self.running = True
-
-        while self.running:
-            
-            i=1
+        i = 0
+            while self.running:
             GPIO.output(self.step_pin, GPIO.HIGH)
-            time.sleep(self.delays[i]/2
+            time.sleep(self.delays[i] / 2)  # Usar delay correspondiente
             GPIO.output(self.step_pin, GPIO.LOW)
-            time.sleep(self.delays[i] / 2)
+            time.sleep(self.delays[i] / 2)  # Usar delay correspondiente
             self.state_changes += 1
-            if i < 101:  i += i else: i = 100
+
+            # Incrementar `i` solo si aún no ha alcanzado el último índice
+            if i < len(self.delays) - 1:  # Último índice es len(self.delays) - 1
+                i += 1
+            else:
+                i = len(self.delays) - 1  # Mantener el índice en el máximo
+
 
     def stop(self):
         """
@@ -130,7 +135,7 @@ class MotorControl:
         self.motor = motor
         self.running = True
         self.medicion_activa = False
-        self.velocidades = []
+        #self.velocidades = []
         self.lcd = LCD.LCD_I2C()
 
     def obtener_datos_usuario(self):
@@ -145,7 +150,7 @@ class MotorControl:
                     continue
 
                 direction = input("Introduce el sentido ('fw' o 'bw'): ").strip().lower()
-                if direction not in ["fw", "bw"]:  # ChatGPT: Cambie "forward/backward" por "fw/bw".
+                if direction not in ["fw", "bw"]:
                     print("Por favor, introduce un sentido valido ('fw' o 'bw').")
                     continue
 
@@ -211,7 +216,7 @@ class MotorControl:
             self.iniciar_medicion_continua(interval=1.0)
             speed_thread = Thread(target=self.ajustar_velocidad)
             speed_thread.start()
-            self.motor.move(direction)
+            self.motor.move(direction, self.motor.speed)
             speed_thread.join()
             self.detener_medicion_continua()
             self.lcd.clear()
