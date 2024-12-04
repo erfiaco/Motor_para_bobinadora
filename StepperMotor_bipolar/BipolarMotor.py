@@ -5,6 +5,8 @@ import math
 from threading import Thread
 import LCD_I2C_classe as LCD
 from threading import Lock
+import sys
+import select
 
 
 
@@ -61,20 +63,33 @@ class StepperMotor:
         :param steps: Numero de pasos para alcanzar la velocidad deseada.
         :return: Lista de valores de delay.
         """
-        min_delay = 0.01
-        target_delay = 1 / (self.steps_per_revolution * self.speed)
-        steps = 400  # Número de pasos para el cambio lineal
-        
-        self.delays = []  # Lista para almacenar los valores de delay
-
-        # Bucle para calcular y usar el delay interpolado
-        for i in range(steps):
-            # Calcular el delay actual redondeado a 5 decimales
-            current_delay = round(min_delay + i * (target_delay - min_delay) / (steps - 1), 5) #funcion lineal
-        
+        with self.lock:
             
-            # Guardar el delay en la lista
-            self.delays.append(current_delay)   
+            min_delay = 0.01
+            target_delay = 1 / (self.steps_per_revolution * self.speed)
+            steps = 400  # Número de pasos para el cambio lineal
+        
+            self.delays = []  # Lista para almacenar los valores de delay
+
+            '''
+            midpoint = steps / 2  # Punto medio de la sigmoide
+            k = 0.1  # Constante que controla la pendiente
+            sigmoid_value = 1 / (1 + math.exp(-k * (i - midpoint)))
+            '''
+            
+            # Bucle para calcular y usar el delay interpolado
+            for i in range(steps):
+                # Calcular el delay actual redondeado a 5 decimales
+                current_delay = round(min_delay + i * (target_delay - min_delay) / (steps - 1), 5) #funcion lineal
+
+                '''
+                
+                current_delay = round(min_delay + (target_delay - min_delay) * (1 - sigmoid_value), 5)
+
+                '''
+                
+                # Guardar el delay en la lista
+                self.delays.append(current_delay)   
 
     
 
@@ -144,6 +159,23 @@ class MotorControl:
         self.velocidades = []
         self.lcd = LCD.LCD_I2C()
 
+    def escuchar_comandos(self):
+        """
+        Escucha comandos del usuario y ejecuta acciones correspondientes.
+        """
+        while self.running:
+            try:
+                print("Presiona 'v' para cambiar la velocidad o 'Ctrl+C' para salir.")
+                i, _, _ = select.select([sys.stdin], [], [], 0.5)  # Esperar entrada durante 0.5 segundos
+                if i:
+                    comando = sys.stdin.readline().strip()
+                    if comando == "v":
+                        self.ajustar_velocidad()
+            except KeyboardInterrupt:
+                print("Saliendo del modo de escucha...")
+                self.running = False
+                break
+    
     def obtener_datos_usuario(self):
         """
         Solicita al usuario la velocidad y el sentido de movimiento.
@@ -166,21 +198,17 @@ class MotorControl:
 
     def ajustar_velocidad(self):
         """
-        Permite cambiar la velocidad del motor dinamicamente mientras esta en funcionamiento.
+        Permite cambiar la velocidad del motor dinámicamente mientras está en funcionamiento.
         """
-        while self.running:
-            try:
-                new_speed = float(input("Introduce la nueva velocidad (mayor que 0): "))
-                if new_speed > 0:
-                    self.motor.set_speed(new_speed)
-                else:
-                    print("La velocidad debe ser mayor que 0.")
-            except ValueError:
-                print("Entrada no valida. Introduce un numero valido.")
-            except KeyboardInterrupt:
-                print("\nDeteniendo ajuste de velocidad...")
-                self.running = False
-                break
+        try:
+            new_speed = float(input("Introduce la nueva velocidad (mayor que 0): "))
+            if new_speed > 0:
+                self.motor.set_speed(new_speed)
+                print(f"Velocidad ajustada a: {new_speed} RPS")
+            else:
+                print("La velocidad debe ser mayor que 0.")
+        except ValueError:
+            print("Entrada no válida. Introduce un número válido.")
 
     def medir_continuamente(self, interval):
         """
@@ -220,11 +248,14 @@ class MotorControl:
             direction = self.obtener_datos_usuario()
             print(f"Ejecutando motor: Velocidad = {self.motor.speed}, Sentido = {direction}")
             self.iniciar_medicion_continua(interval=1.0)
-            speed_thread = Thread(target=self.ajustar_velocidad)
-            speed_thread.start()
+            
+
+            comando_thread = Thread(target=self.escuchar_comandos)
+            comando_thread.daemon = True
+            comando_thread.start()
             
             self.motor.move(direction, self.motor.speed)
-            speed_thread.join()
+            
             self.detener_medicion_continua()
             self.lcd.clear()
             self.lcd.write(f"Vel final: {self.velocidades}", 1)
@@ -237,8 +268,7 @@ class MotorControl:
             self.running = False
             self.motor.stop()
             self.detener_medicion_continua()
-            if speed_thread.is_alive():
-                speed_thread.join()
+            
             self.motor.cleanup()
             self.lcd.clear()
             
