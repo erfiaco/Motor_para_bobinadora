@@ -4,6 +4,7 @@ import RPi.GPIO as GPIO
 import math
 from threading import Thread
 import LCD_I2C_classe as LCD
+from threading import Lock
 
 
 
@@ -21,12 +22,13 @@ class StepperMotor:
         """
         self.step_pin = step_pin 
         self.dir_pin = dir_pin
-        self.steps_per_revolution = 200
+        self.steps_per_revolution = steps_per_revolution
         self.speed = speed  # En revoluciones por segundo
         self.current_speed = 0
         self.state_changes = 0
         self.setup()
         self.running = False  # Bandera para controlar el bucle del motor
+        self.lock = Lock()
         
        
 
@@ -94,18 +96,24 @@ class StepperMotor:
         self.calculate_delays()    
         self.running = True
         i = 0
-            
+        
         while self.running:
+            with self.lock:
+                current_delay = self.delays[i]
             GPIO.output(self.step_pin, GPIO.HIGH)
-            time.sleep(self.delays[i] / 2)  # Usar delay correspondiente
+            time.sleep(current_delay / 2)
             GPIO.output(self.step_pin, GPIO.LOW)
-            time.sleep(self.delays[i] / 2)  # Usar delay correspondiente
+            time.sleep(current_delay / 2)
             self.state_changes += 1
 
-            # Incrementar `i` solo si aún no ha alcanzado el último índice
-            if i < len(self.delays) - 1:  # Último índice es len(self.delays) - 1
+            if i < len(self.delays) - 1:
                 i += 1
-            
+
+    
+    def set_speed(self, new_speed):
+        with self.lock:
+            self.speed = new_speed
+            self.calculate_delays()        
 
     def stop(self):
         """
@@ -133,7 +141,7 @@ class MotorControl:
         self.motor = motor
         self.running = True
         self.medicion_activa = False
-        #self.velocidades = []
+        self.velocidades = []
         self.lcd = LCD.LCD_I2C()
 
     def obtener_datos_usuario(self):
@@ -226,8 +234,14 @@ class MotorControl:
         except KeyboardInterrupt:
             print("\nPrograma interrumpido por el usuario.")
         finally:
+            self.running = False
             self.motor.stop()
+            self.detener_medicion_continua()
+            if speed_thread.is_alive():
+                speed_thread.join()
             self.motor.cleanup()
+            self.lcd.clear()
+            
 
 
 # Ejemplo de uso
