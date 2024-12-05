@@ -1,0 +1,2 @@
+Las velocidades que me sirven son delay = 0.001 (30 rev por segundos)
+Las velocidades que me sirven son delay = 0.0002 (2,5 rev por segundos)
