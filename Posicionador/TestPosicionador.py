@@ -12,7 +12,7 @@ class Posicionador:
         """
         self.dir_pin = dir_pin
         self.step_pin = step_pin
-        self.total_time = total_time
+        #self.total_time = total_time
 
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.dir_pin, GPIO.OUT)
@@ -32,9 +32,9 @@ class Posicionador:
 
 
         # Configuración inicial
-        min_delay = 0.0001  # Delay entre pasos
+        min_delay = 0.0002  # Delay entre pasos
         current_p = 0  # Posición inicial del motor
-        posiciones = [18, 9, 6, 2, 13, 14, 12, 3, 10, 7]  # Ejemplo de posiciones lineales
+        posiciones = [50, 40, 1, 30, 13, 14, 12, 3, 10, 7]  # Ejemplo de posiciones lineales
 
         # Bucle para recorrer las posiciones del vector
         for pos in posiciones:
@@ -43,19 +43,19 @@ class Posicionador:
             # Determinar la dirección del motor
             if pos > current_p:
                 multi_steps = abs(pos - current_p)  # Pasos necesarios
-                GPIO.output(self.step_dir, GPIO.HIGH)  # Girar hacia adelante
+                GPIO.output(self.dir_pin, GPIO.HIGH)  # Girar hacia adelante
             elif pos < current_p:
                 multi_steps = abs(pos - current_p)
-                GPIO.output(self.step_dir, GPIO.LOW)  # Girar hacia atrás
+                GPIO.output(self.dir_pin, GPIO.LOW)  # Girar hacia atrás
             else:
                 continue  # Si la posición es la misma, no hacer nada
 
         # Generar pulsos para alcanzar la nueva posición
         for _ in range(multi_steps):
             GPIO.output(self.step_pin, GPIO.HIGH)
-            time.sleep(min_delay)
+            time.sleep(min_delay / 2)
             GPIO.output(self.step_pin, GPIO.LOW)
-            time.sleep(min_delay)
+            time.sleep(min_delay / 2)
 
         # Actualizar la posición actual
         current_p = pos
@@ -74,8 +74,8 @@ class Posicionador:
 if __name__ == "__main__":
     try:
         # Pines GPIO para el controlador A4988
-        dir_pin = 5  # Pin de dirección
-        step_pin = 6  # Pin de paso (STEP)
+        dir_pin = 27  # Pin de dirección
+        step_pin = 17  # Pin de paso (STEP)
 
         # Inicializa el motor
         motor = Posicionador(dir_pin, step_pin)

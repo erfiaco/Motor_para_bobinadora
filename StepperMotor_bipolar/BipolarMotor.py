@@ -29,11 +29,13 @@ class StepperMotor:
         self.dir_pin = dir_pin
         self.steps_per_revolution = steps_per_revolution
         self.speed = speed  # En revoluciones por segundo
+        self.direction = "fw"
         self.speed_lock = Lock()
         self.current_speed = 0
         self.state_changes = 0
         self.setup()
         self.running = False  # Bandera para controlar el bucle del motor
+        self.speed_updated = False 
 
         self.lock = Lock()
 
@@ -78,7 +80,11 @@ class StepperMotor:
 
         with self.lock:
             
-            min_delay = 0.05
+            if self.speed_updated == False:
+                min_delay = 0.05
+            else:
+                min_delay = self.delays[-1]
+                
             target_delay = 1 / (self.steps_per_revolution * self.speed)
             steps = 800  # Número de pasos para el cambio lineal
         
@@ -115,9 +121,9 @@ class StepperMotor:
         
         
         #Gestiona el sentido del movimiento
-        if direction == "fw":  
+        if self.direction == "fw":  
             GPIO.output(self.dir_pin, GPIO.HIGH)
-        elif direction == "bw":
+        elif self.direction == "bw":
             GPIO.output(self.dir_pin, GPIO.LOW)
         else:
             raise ValueError("Direccion invalida. Usa 'fw' o 'bw'.")
@@ -129,6 +135,12 @@ class StepperMotor:
         
         while self.running:
             with self.lock:
+                # Verifica si la velocidad ha cambiado
+                if self.speed_updated:
+                    self.speed_updated = False  # Reinicia la bandera
+                    i = 0  # Reinicia el índice de retardos
+                    self.calculate_delays()  # Recalcula los retardos
+                
                 current_delay = self.delays[i]
             GPIO.output(self.step_pin, GPIO.HIGH)
             time.sleep(current_delay / 2)
@@ -143,7 +155,11 @@ class StepperMotor:
     def set_speed(self, new_speed):
         with self.lock:
             self.speed = new_speed
-            self.calculate_delays()        
+            self.calculate_delays()
+            self.speed_updated = True
+            
+            
+            print(f"Velocidad ajustada a {self.speed} RPS.")
 
 
     def stop(self):
@@ -179,9 +195,9 @@ class MotorControl:
         """
         Escucha comandos del usuario y ejecuta acciones correspondientes.
         """
+        print("Presiona 'v' para cambiar la velocidad o 'Ctrl+C' para salir.")
         while self.running:
             try:
-                print("Presiona 'v' para cambiar la velocidad o 'Ctrl+C' para salir.")
                 i, _, _ = select.select([sys.stdin], [], [], 0.5)  # Esperar entrada durante 0.5 segundos
                 if i:
                     comando = sys.stdin.readline().strip()
@@ -203,12 +219,12 @@ class MotorControl:
                     print("La velocidad debe ser mayor que 0. Intentalo de nuevo.")
                     continue
 
-                direction = input("Introduce el sentido ('fw' o 'bw'): ").strip().lower()
-                if direction not in ["fw", "bw"]:
+                self.direction = input("Introduce el sentido ('fw' o 'bw'): ").strip().lower()
+                if self.direction not in ["fw", "bw"]:
                     print("Por favor, introduce un sentido valido ('fw' o 'bw').")
                     continue
 
-                return direction
+                return self.direction
             except ValueError:
                 print("Entrada no valida. Asegurate de introducir un numero para la velocidad.")
 
@@ -261,8 +277,8 @@ class MotorControl:
         Logica principal para obtener datos del usuario y ejecutar el motor.
         """
         try:
-            direction = self.obtener_datos_usuario()
-            print(f"Ejecutando motor: Velocidad = {self.motor.speed}, Sentido = {direction}")
+            self.direction = self.obtener_datos_usuario()
+            print(f"Ejecutando motor: Velocidad = {self.motor.speed}, Sentido = {self.direction}")
             self.iniciar_medicion_continua(interval=1.0)
             
 
@@ -270,7 +286,7 @@ class MotorControl:
             comando_thread.daemon = True
             comando_thread.start()
             
-            self.motor.move(direction, self.motor.speed)
+            self.motor.move(self.direction, self.motor.speed)
             
             self.detener_medicion_continua()
             self.lcd.clear()
