@@ -1,2 +1,15 @@
+Si ya tienes un entorno virtual creado y quieres acceder a él, solo necesitas activarlo nuevamente con el comando source:
+
 Vas a la carpeta madre donde esta la carpeta venvstepperm (en nuestro caso es Douments) y ejecutas:
 source venvstepperm/bin/activate
+
+
+verificar que estas en el entorno virtual:
+
+which python
+which pip
+
+deactivate
+
+
+
